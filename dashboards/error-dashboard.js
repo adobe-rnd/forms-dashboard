@@ -3,6 +3,7 @@
  * Displays hourly error counts with interactive drill-down into error sources and targets
  */
 import '../charts/error-rate-chart.js';
+import '../charts/user-agent-pie-chart.js';
 
 class ErrorDashboard extends HTMLElement {
   constructor() {
@@ -128,14 +129,28 @@ class ErrorDashboard extends HTMLElement {
 
         .details-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          grid-template-columns: repeat(2, 1fr);
           gap: 24px;
+          margin-bottom: 24px;
         }
 
         .detail-section {
           background: #f9fafb;
           border-radius: 6px;
           padding: 16px;
+        }
+
+        .chart-section {
+          background: #f9fafb;
+          border-radius: 6px;
+          padding: 16px;
+        }
+
+        .chart-section h4 {
+          margin: 0 0 16px 0;
+          color: #374151;
+          font-size: 1rem;
+          font-weight: 600;
         }
 
         .detail-section h4 {
@@ -264,6 +279,10 @@ class ErrorDashboard extends HTMLElement {
               <div class="detail-list" id="error-targets-list"></div>
             </div>
           </div>
+          <div class="chart-section">
+            <h4>User Agent Distribution</h4>
+            <user-agent-pie-chart id="user-agent-chart"></user-agent-pie-chart>
+          </div>
         </div>
       </div>
     `;
@@ -329,9 +348,10 @@ class ErrorDashboard extends HTMLElement {
       hour: [hourData.rawHour]
     });
 
-    // Access the errorSource and errorTarget facets for this filtered hour
+    // Access the errorSource, errorTarget, and userAgent facets for this filtered hour
     const errorSourceFacets = this.dataChunks.facets.errorSource || [];
     const errorTargetFacets = this.dataChunks.facets.errorTarget || [];
+    const userAgentFacets = this.dataChunks.facets.userAgent || [];
 
     // Calculate total errors in this hour
     const totalErrorsInHour = hourData.errorCount;
@@ -339,6 +359,12 @@ class ErrorDashboard extends HTMLElement {
     // Render sources and targets using facet data
     this.renderDetailListFromFacets('error-sources-list', errorSourceFacets, totalErrorsInHour);
     this.renderDetailListFromFacets('error-targets-list', errorTargetFacets, totalErrorsInHour);
+
+    // Render user agent pie chart
+    const userAgentChart = this.shadowRoot.getElementById('user-agent-chart');
+    if (userAgentChart) {
+      userAgentChart.setData(userAgentFacets);
+    }
 
     // Clear the filter to reset the dataChunks
     this.dataChunks.filter = {};
@@ -390,6 +416,11 @@ class ErrorDashboard extends HTMLElement {
     if (this.dataChunks) {
       this.dataChunks.filter = {};
     }
+    // Reset user agent chart
+    const userAgentChart = this.shadowRoot.getElementById('user-agent-chart');
+    if (userAgentChart) {
+      userAgentChart.reset();
+    }
     this.shadowRoot.getElementById('details-panel').classList.remove('visible');
   }
 
@@ -398,6 +429,10 @@ class ErrorDashboard extends HTMLElement {
     const chart = this.shadowRoot.getElementById('error-chart');
     if (chart) {
       chart.reset();
+    }
+    const userAgentChart = this.shadowRoot.getElementById('user-agent-chart');
+    if (userAgentChart) {
+      userAgentChart.reset();
     }
     this.dataChunks = null;
     this.url = '';
