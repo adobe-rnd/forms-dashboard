@@ -90,4 +90,19 @@ function engagementDataChunks(data) {
   return dataChunks;
 }
 
-export { errorDataChunks, loadDataChunks, engagementDataChunks };
+function missingresource(bundle) {
+  return bundle.events
+  .filter(e => e.checkpoint === 'missingresource')
+  .map(e => e.source);
+}
+
+function resourceDataChunks(data) {
+  const dataChunks = new DataChunks();
+  dataChunks.load(data);
+  dataChunks.addSeries('pageViews', series.pageViews);
+  dataChunks.addFacet('hour', hour, 'every', 'none');
+  dataChunks.addFacet('missingresource', missingresource, 'every', 'none');
+  return dataChunks;
+}
+
+export { errorDataChunks, loadDataChunks, engagementDataChunks, resourceDataChunks };

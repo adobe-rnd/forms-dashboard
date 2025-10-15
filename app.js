@@ -6,7 +6,8 @@ import DateRangePicker from './components/date-range-picker.js';
 import ErrorDashboard from './dashboards/error-dashboard.js';
 import LoadDashboard from './dashboards/load-dashboard.js';
 import EngagementDashboard from './dashboards/engagement-dashboard.js';
-import { errorDataChunks, loadDataChunks, engagementDataChunks } from './datachunks.js';
+import ResourceDashboard from './dashboards/resource-dashboard.js';
+import { errorDataChunks, loadDataChunks, engagementDataChunks, resourceDataChunks } from './datachunks.js';
 
 const dataLoader = new DataLoader();
 const BUNDLER_ENDPOINT = 'https://bundles.aem.page';
@@ -66,6 +67,11 @@ function renderDashboard(dashboardType, filteredData, url) {
     const engagementDashboard = document.createElement('engagement-dashboard');
     urlResults.appendChild(engagementDashboard);
     engagementDashboard.setData(dataChunks, url);
+  } else if (dashboardType === 'resources') {
+    const dataChunks = resourceDataChunks(filteredData);
+    const resourceDashboard = document.createElement('resource-dashboard');
+    urlResults.appendChild(resourceDashboard);
+    resourceDashboard.setData(dataChunks, url);
   }
 }
 
@@ -73,6 +79,7 @@ function setupDashboardSwitcher() {
   const errorTab = document.getElementById('tab-errors');
   const loadTab = document.getElementById('tab-load');
   const engagementTab = document.getElementById('tab-engagement');
+  const resourcesTab = document.getElementById('tab-resources');
   const urlResults = document.getElementById('url-results');
 
   errorTab.addEventListener('click', () => {
@@ -80,6 +87,7 @@ function setupDashboardSwitcher() {
     errorTab.classList.add('active');
     loadTab.classList.remove('active');
     engagementTab.classList.remove('active');
+    resourcesTab.classList.remove('active');
 
     // If we have data loaded, automatically show the error dashboard
     if (currentFilteredData && currentUrl) {
@@ -94,6 +102,7 @@ function setupDashboardSwitcher() {
     loadTab.classList.add('active');
     errorTab.classList.remove('active');
     engagementTab.classList.remove('active');
+    resourcesTab.classList.remove('active');
 
     // If we have data loaded, automatically show the load dashboard
     if (currentFilteredData && currentUrl) {
@@ -108,10 +117,26 @@ function setupDashboardSwitcher() {
     engagementTab.classList.add('active');
     errorTab.classList.remove('active');
     loadTab.classList.remove('active');
+    resourcesTab.classList.remove('active');
 
     // If we have data loaded, automatically show the engagement dashboard
     if (currentFilteredData && currentUrl) {
       renderDashboard('engagement', currentFilteredData, currentUrl);
+    } else {
+      urlResults.innerHTML = '<p>Please select a URL to view dashboard</p>';
+    }
+  });
+
+  resourcesTab.addEventListener('click', () => {
+    currentDashboard = 'resources';
+    resourcesTab.classList.add('active');
+    errorTab.classList.remove('active');
+    loadTab.classList.remove('active');
+    engagementTab.classList.remove('active');
+
+    // If we have data loaded, automatically show the resources dashboard
+    if (currentFilteredData && currentUrl) {
+      renderDashboard('resources', currentFilteredData, currentUrl);
     } else {
       urlResults.innerHTML = '<p>Please select a URL to view dashboard</p>';
     }
