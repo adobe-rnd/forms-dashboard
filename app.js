@@ -4,10 +4,10 @@ import { DataChunks, series, facets } from '@adobe/rum-distiller';
 import URLAutocomplete from './components/url-autocomplete.js';
 import DateRangePicker from './components/date-range-picker.js';
 import ErrorDashboard from './dashboards/error-dashboard.js';
-import LoadDashboard from './dashboards/load-dashboard.js';
+import LoadDashboard from './dashboards/performance-dashboard.js';
 import EngagementDashboard from './dashboards/engagement-dashboard.js';
 import ResourceDashboard from './dashboards/resource-dashboard.js';
-import { errorDataChunks, loadDataChunks, engagementDataChunks, resourceDataChunks } from './datachunks.js';
+import { errorDataChunks, performanceDataChunks, engagementDataChunks, resourceDataChunks } from './datachunks.js';
 
 const dataLoader = new DataLoader();
 const BUNDLER_ENDPOINT = 'https://bundles.aem.page';
@@ -66,9 +66,9 @@ function hideLoading() {
 
 const dataChunksConfig = {
   error: errorDataChunks,
-  load: loadDataChunks,
+  performance: performanceDataChunks,
   engagement: engagementDataChunks,
-  resources: resourceDataChunks
+  resource: resourceDataChunks
 }
 
 // Single function to read URL params, set state, and render
@@ -92,8 +92,20 @@ async function renderFromURLParams() {
 
   const activeTab = document.getElementById(`tab-${tab}`);
   activeTab?.classList.add('active');
-  // Update date range picker
-  dateRangePicker.setDates(startDate, endDate);
+
+  // Only update dates if they're different to avoid circular event triggering
+  const currentStartDate = dateRangePicker.getStartDate();
+  const currentEndDate = dateRangePicker.getEndDate();
+  if (currentStartDate !== startDate || currentEndDate !== endDate) {
+    dateRangePicker.setDates(startDate, endDate);
+  }
+
+  // Only update URL if it's different
+  const currentUrl = urlAutocomplete.getValue();
+  if (currentUrl !== url) {
+    urlAutocomplete.setValue(url);
+  }
+
   // If URL is specified, filter data and render dashboard
   if (url) {
     try {
@@ -140,6 +152,7 @@ async function loadData(startDate, endDate) {
   newDataChunks.load(currentData);
   newDataChunks.addFacet('url', facets.url);
   const newUrls = newDataChunks.facets.url.map(url => url.value);
+  const urlAutocomplete = document.getElementById('url-autocomplete');
   urlAutocomplete.setUrls(newUrls);
 }
 
@@ -173,7 +186,7 @@ function setupEventListeners() {
 
     try {
       // Fetch new data for the date range
-      loadData(startDate, endDate);
+      await loadData(startDate, endDate);
       // Update URL parameters and re-render
       handleParamUpdate({ startDate, endDate });
     } catch (error) {
@@ -188,6 +201,9 @@ function setupEventListeners() {
 window.addEventListener('popstate', () => {
   renderFromURLParams();
 });
+
+// Initialize event listeners FIRST
+setupEventListeners();
 
 const params = getURLParams();
 const dateRangePicker = document.getElementById('date-range-picker');
@@ -207,16 +223,11 @@ const merged = {
 const changedParams = Object.fromEntries(
     Object.entries(defaults).filter(
       ([key, value]) => merged[key] !== value
-    )
+    ).map(([key, value]) => [key, merged[key]])
   )
-debugger;
-// Initialize event listeners
-setupEventListeners();
-
-if (merged.startDate || merged.endDate) {
+// Load initial data
+if (merged.startDate && merged.endDate) {
   await loadData(merged.startDate, merged.endDate);
 }
 
-//if (Object.keys(changedParams).length > 0) {
 handleParamUpdate(changedParams);
-//}

@@ -73,7 +73,7 @@ function pageViews(bundle) {
   return bundle.weight;
 }
 
-function loadDataChunks(data) {
+function performanceDataChunks(data) {
   const dataChunks = new DataChunks();
   dataChunks.load(data);
   dataChunks.addSeries('pageViews', series.pageViews);
@@ -110,4 +110,4 @@ function resourceDataChunks(data) {
   return dataChunks;
 }
 
-export { errorDataChunks, loadDataChunks, engagementDataChunks, resourceDataChunks };
+export { errorDataChunks, performanceDataChunks, engagementDataChunks, resourceDataChunks };

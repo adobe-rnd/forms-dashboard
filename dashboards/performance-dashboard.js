@@ -4,7 +4,7 @@
  */
 import '../charts/load-time-chart.js';
 
-class LoadDashboard extends HTMLElement {
+class PerformanceDashboard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -174,7 +174,7 @@ class LoadDashboard extends HTMLElement {
 
       <div class="dashboard-container">
         <div class="dashboard-header">
-          <h2>Form Load Time Dashboard</h2>
+          <h2>Performance Dashboard</h2>
           <div class="summary-stats" id="summary-stats">
             <div class="stat-item">
               <span class="stat-label">Fastest (Min)</span>
@@ -307,7 +307,7 @@ class LoadDashboard extends HTMLElement {
 }
 
 // Define the custom element
-customElements.define('load-dashboard', LoadDashboard);
+customElements.define('performance-dashboard', PerformanceDashboard);
 
-export default LoadDashboard;
+export default PerformanceDashboard;
 

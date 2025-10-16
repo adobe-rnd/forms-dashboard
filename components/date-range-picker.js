@@ -45,8 +45,14 @@ class DateRangePicker extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (oldValue !== newValue) {
-      this.render();
+    const startDateInput = this.shadowRoot.getElementById('start-date');
+    const endDateInput = this.shadowRoot.getElementById('end-date');
+    if (name === 'start' || name === 'end') {
+      if (name === 'start') {
+        startDateInput.value = newValue || '';
+      } else if (name === 'end') {
+        endDateInput.value = newValue || '';
+      }
     }
   }
 
