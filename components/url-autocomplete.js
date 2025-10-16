@@ -139,6 +139,10 @@ class URLAutocomplete extends HTMLElement {
       }
     });
 
+    input.addEventListener('change', () => {
+      this.selectUrl(input.value);
+    });
+
     // Click outside to close
     document.addEventListener('click', (e) => {
       if (!this.contains(e.target)) {
