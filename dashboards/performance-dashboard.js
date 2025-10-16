@@ -180,6 +180,9 @@ class PerformanceDashboard extends HTMLElement {
         <div class="dashboard-header">
           <h2>Performance</h2>
           <h3>Engagement Readiness Time (Form Visibility)</h3>
+          <p class="description">
+            How long does it take for the form to be visible on the screen?
+          </p>
           <div class="summary-stats" id="summary-stats">
             <div class="stat-item">
               <span class="stat-label">Fastest (Min)</span>

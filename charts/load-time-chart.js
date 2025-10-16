@@ -218,7 +218,7 @@ class LoadTimeChart extends HTMLElement {
             beginAtZero: true,
             title: {
               display: true,
-              text: 'Load Time (seconds)'
+              text: 'Time (seconds)'
             },
             ticks: {
               callback: (value) => this.formatTime(value)

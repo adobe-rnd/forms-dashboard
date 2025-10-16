@@ -110,10 +110,7 @@ class LoadTimeHistogram extends HTMLElement {
 
       <div class="histogram-wrapper">
         <div class="histogram-header">
-          <h3>Load Time Distribution</h3>
-          <p class="histogram-description">
-            Form Block
-          </p>
+          <h3>Engagement Readiness Time (Form Visibility)Distribution</h3>
         </div>
 
         <div class="histogram-container">
@@ -407,7 +404,7 @@ class LoadTimeHistogram extends HTMLElement {
           },
           title: {
             display: true,
-            text: 'Form Block Load Time Distribution',
+            text: 'Engagement Readiness Time (Form Visibility) Distribution',
             font: {
               size: 16,
               weight: 'bold'
@@ -419,7 +416,7 @@ class LoadTimeHistogram extends HTMLElement {
             beginAtZero: true,
             title: {
               display: true,
-              text: 'Number of Loads'
+              text: 'Number of Views'
             },
             ticks: {
               callback: (value) => value.toLocaleString()
@@ -428,7 +425,7 @@ class LoadTimeHistogram extends HTMLElement {
           x: {
             title: {
               display: true,
-              text: 'Load Time Range'
+              text: 'Time Range'
             },
             ticks: {
               maxRotation: 45,
@@ -452,15 +449,15 @@ class LoadTimeHistogram extends HTMLElement {
 
     statsContainer.innerHTML = `
       <div class="histogram-stat">
-        <span class="histogram-stat-label">Total Loads</span>
+        <span class="histogram-stat-label">Total Views</span>
         <span class="histogram-stat-value">${totalWeightedCount.toLocaleString()}</span>
       </div>
       <div class="histogram-stat">
-        <span class="histogram-stat-label">Min Load Time</span>
+        <span class="histogram-stat-label">Min View Time</span>
         <span class="histogram-stat-value">${this.formatTime(min)}</span>
       </div>
       <div class="histogram-stat">
-        <span class="histogram-stat-label">Max Load Time</span>
+        <span class="histogram-stat-label">Max View Time</span>
         <span class="histogram-stat-value">${this.formatTime(max)}</span>
       </div>
       <div class="histogram-stat">
