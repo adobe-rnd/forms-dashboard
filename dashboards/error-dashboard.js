@@ -52,26 +52,41 @@ class ErrorDashboard extends HTMLElement {
         }
 
         .summary-stats {
-          display: flex;
-          gap: 24px;
-          flex-wrap: wrap;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
           margin-top: 12px;
         }
 
         .stat-item {
           display: flex;
           flex-direction: column;
+          background: #f9fafb;
+          padding: 16px;
+          border-radius: 8px;
+          border-left: 4px solid #3b82f6;
+        }
+
+        .stat-item.error-stat {
+          border-left-color: #ef4444;
+          background: #fef2f2;
+        }
+
+        .stat-item.warning {
+          border-left-color: #f59e0b;
+          background: #fffbeb;
         }
 
         .stat-label {
           font-size: 0.875rem;
           color: #6b7280;
-          margin-bottom: 4px;
+          margin-bottom: 8px;
+          font-weight: 500;
         }
 
         .stat-value {
-          font-size: 1.25rem;
-          font-weight: 600;
+          font-size: 1.5rem;
+          font-weight: 700;
           color: #1f2937;
         }
 
@@ -79,12 +94,125 @@ class ErrorDashboard extends HTMLElement {
           color: #dc2626;
         }
 
+        .stat-value.warning-color {
+          color: #d97706;
+        }
+
         .stat-value.success {
           color: #059669;
         }
 
+        .stat-subtext {
+          font-size: 0.75rem;
+          color: #9ca3af;
+          margin-top: 4px;
+        }
+
         error-rate-chart {
           margin-bottom: 24px;
+        }
+
+        .resources-section {
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 2px solid #e5e7eb;
+        }
+
+        .resources-section h3 {
+          margin: 0 0 16px 0;
+          color: #1e40af;
+          font-size: 1.25rem;
+          font-weight: 600;
+        }
+
+        .resources-list {
+          max-height: 600px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+        }
+
+        .resource-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          border-bottom: 1px solid #e5e7eb;
+          transition: background-color 0.2s;
+        }
+
+        .resource-item:hover {
+          background: #f9fafb;
+        }
+
+        .resource-item:last-child {
+          border-bottom: none;
+        }
+
+        .resource-item.high-frequency {
+          background: #fef2f2;
+        }
+
+        .resource-item.medium-frequency {
+          background: #fffbeb;
+        }
+
+        .resource-info {
+          flex: 1;
+          margin-right: 16px;
+          min-width: 0;
+        }
+
+        .resource-url {
+          font-size: 0.875rem;
+          color: #374151;
+          word-break: break-all;
+          font-family: monospace;
+          margin-bottom: 4px;
+        }
+
+        .resource-details {
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .resource-stats {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-shrink: 0;
+        }
+
+        .resource-count {
+          font-weight: 700;
+          font-size: 1.25rem;
+          color: #1f2937;
+        }
+
+        .resource-count.high {
+          color: #dc2626;
+        }
+
+        .resource-count.medium {
+          color: #f59e0b;
+        }
+
+        .resource-count.low {
+          color: #6b7280;
+        }
+
+        .resource-percentage {
+          font-size: 0.875rem;
+          color: #6b7280;
+          background: #f3f4f6;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-weight: 600;
+        }
+
+        .no-data.success {
+          color: #059669;
+          background: #f0fdf4;
         }
 
         .details-panel {
@@ -229,12 +357,23 @@ class ErrorDashboard extends HTMLElement {
 
         @media (max-width: 768px) {
           .summary-stats {
-            flex-direction: column;
+            grid-template-columns: 1fr;
             gap: 12px;
           }
 
           .details-grid {
             grid-template-columns: 1fr;
+          }
+
+          .resource-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .resource-stats {
+            width: 100%;
+            justify-content: space-between;
           }
         }
       </style>
@@ -243,7 +382,7 @@ class ErrorDashboard extends HTMLElement {
         <div class="dashboard-header">
           <h2>Error Analysis</h2>
           <div class="summary-stats" id="summary-stats">
-            <div class="stat-item">
+            <div class="stat-item error-stat">
               <span class="stat-label">Total Errors</span>
               <span class="stat-value error" id="total-errors">-</span>
             </div>
@@ -251,14 +390,30 @@ class ErrorDashboard extends HTMLElement {
               <span class="stat-label">Total Page Views</span>
               <span class="stat-value" id="total-views">-</span>
             </div>
-            <div class="stat-item">
+            <div class="stat-item error-stat">
               <span class="stat-label">Average Error Rate</span>
-              <span class="stat-value" id="avg-error-rate">-</span>
+              <span class="stat-value error" id="avg-error-rate">-</span>
+            </div>
+            <div class="stat-item warning">
+              <span class="stat-label">Page Views with Missing Resources</span>
+              <span class="stat-value warning-color" id="pages-with-missing">-</span>
+              <span class="stat-subtext" id="pages-percentage">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unique Missing Resources</span>
+              <span class="stat-value" id="unique-resources">-</span>
             </div>
           </div>
         </div>
 
         <error-rate-chart id="error-chart"></error-rate-chart>
+
+        <div class="resources-section">
+          <h3>Missing Resources (sorted by frequency)</h3>
+          <div class="resources-list" id="resources-list">
+            <div class="loading">Loading resources...</div>
+          </div>
+        </div>
 
         <div class="details-panel" id="details-panel">
           <div class="details-header">
@@ -302,6 +457,7 @@ class ErrorDashboard extends HTMLElement {
     this.url = url;
     this.updateSummaryStats();
     this.updateChart();
+    this.updateResourcesList();
   }
 
   updateChart() {
@@ -319,9 +475,22 @@ class ErrorDashboard extends HTMLElement {
     const totalViews = totals.pageViews?.sum || 0;
     const avgErrorRate = totalViews > 0 ? (totalErrors / totalViews) * 100 : 0;
 
+    // Get missing resources facet data
+    const missingResources = this.dataChunks.facets.missingresource || [];
+    const uniqueResourcesCount = missingResources.length;
+
+    // Calculate pages with missing resources (unique page views that had missing resources)
+    const pagesWithMissing = missingResources.reduce((sum, resource) => sum + resource.weight, 0);
+
+    // Calculate percentage
+    const pagesPercentage = totalViews > 0 ? (pagesWithMissing / totalViews) * 100 : 0;
+
     this.shadowRoot.getElementById('total-errors').textContent = totalErrors.toLocaleString();
     this.shadowRoot.getElementById('total-views').textContent = totalViews.toLocaleString();
     this.shadowRoot.getElementById('avg-error-rate').textContent = `${avgErrorRate.toFixed(2)}%`;
+    this.shadowRoot.getElementById('pages-with-missing').textContent = pagesWithMissing.toLocaleString();
+    this.shadowRoot.getElementById('unique-resources').textContent = uniqueResourcesCount.toLocaleString();
+    this.shadowRoot.getElementById('pages-percentage').textContent = `${pagesPercentage.toFixed(1)}% of page views affected`;
   }
 
   updateFilter(filter) {
@@ -403,6 +572,53 @@ class ErrorDashboard extends HTMLElement {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  updateResourcesList() {
+    if (!this.dataChunks) return;
+
+    const container = this.shadowRoot.getElementById('resources-list');
+    const missingResources = this.dataChunks.facets.missingresource || [];
+
+    // Check if we have data
+    if (missingResources.length === 0) {
+      container.innerHTML = '<div class="no-data success">✓ No missing resources detected! All resources loaded successfully.</div>';
+      return;
+    }
+
+    // Sort by weight (descending)
+    const sortedResources = [...missingResources].sort((a, b) => b.weight - a.weight);
+
+    // Determine thresholds for high/medium/low
+    const maxCount = sortedResources[0]?.weight || 0;
+    const highThreshold = maxCount * 0.5;
+    const mediumThreshold = maxCount * 0.2;
+
+    const totalPageViews = this.dataChunks.totals.pageViews?.sum || 0;
+
+    // Render resources list
+    const html = sortedResources.map((resource, index) => {
+      const percentage = totalPageViews > 0 ? (resource.weight / totalPageViews) * 100 : 0;
+      const frequencyClass = resource.weight >= highThreshold ? 'high-frequency' :
+                           resource.weight >= mediumThreshold ? 'medium-frequency' : '';
+      const countClass = resource.weight >= highThreshold ? 'high' :
+                        resource.weight >= mediumThreshold ? 'medium' : 'low';
+
+      return `
+        <div class="resource-item ${frequencyClass}">
+          <div class="resource-info">
+            <div class="resource-url">${this.escapeHtml(resource.value)}</div>
+            <div class="resource-details">Rank #${index + 1}</div>
+          </div>
+          <div class="resource-stats">
+            <span class="resource-count ${countClass}">${resource.weight.toLocaleString()}</span>
+            <span class="resource-percentage">${percentage.toFixed(1)}%</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
   }
 
   clearSelection() {

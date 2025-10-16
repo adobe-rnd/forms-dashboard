@@ -35,16 +35,23 @@ function hour(bundle) {
   return [`${year}-${month}-${day}T${hour}:00:00`];
 }
 
+function missingresource(bundle) {
+  return bundle.events
+  .filter(e => e.checkpoint === 'missingresource')
+  .map(e => e.source);
+}
+
 function errorDataChunks(data) {
   const dataChunks = new DataChunks();
   dataChunks.load(data);
 
   dataChunks.addSeries('pageViews', series.pageViews);
-  dataChunks.addSeries('errorCount', errorCount, 'every', 'none');
-  dataChunks.addFacet('errorSource', errorSource, 'every', 'none');
-  dataChunks.addFacet('errorTarget', errorTarget, 'every', 'none');
-  dataChunks.addFacet('hour', hour, 'every', 'none');
+  dataChunks.addSeries('errorCount', errorCount, 'every');
+  dataChunks.addFacet('errorSource', errorSource, 'every');
+  dataChunks.addFacet('errorTarget', errorTarget, 'every');
+  dataChunks.addFacet('hour', hour, 'every');
   dataChunks.addFacet('userAgent', facets.userAgent);
+  dataChunks.addFacet('missingresource', missingresource, 'every');
   return dataChunks;
 }
 
@@ -102,18 +109,12 @@ function engagementDataChunks(data) {
   return dataChunks;
 }
 
-function missingresource(bundle) {
-  return bundle.events
-  .filter(e => e.checkpoint === 'missingresource')
-  .map(e => e.source);
-}
-
 function resourceDataChunks(data) {
   const dataChunks = new DataChunks();
   dataChunks.load(data);
   dataChunks.addSeries('pageViews', series.pageViews);
   dataChunks.addFacet('hour', hour, 'every', 'none');
-  dataChunks.addFacet('missingresource', missingresource, 'every', 'none');
+  dataChunks.addFacet('missingresource', missingresource, 'every');
   return dataChunks;
 }
 
