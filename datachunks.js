@@ -56,27 +56,35 @@ function getFormLoadEvent(events) {
   return events.find(isFormLoadEvent);
 }
 
-function formBlockLoadTime(bundle) {
-  const sortedEvents = bundle.events.sort((a, b) => a.timeDelta - b.timeDelta);
-  const formLoad = getFormLoadEvent(sortedEvents);
-  if (formLoad?.timeDelta > 5 * 60 * 1000) {
+function formBlockLoadTime(threshold) {
+  return function time(bundle) {
+    const sortedEvents = bundle.events.sort((a, b) => a.timeDelta - b.timeDelta);
+    const formLoad = getFormLoadEvent(sortedEvents);
+    if (threshold && formLoad?.timeDelta > threshold) {
+      return undefined;
+    }
+    if (formLoad?.timeDelta > 0) {
+      return formLoad?.timeDelta / 1000;
+    }
     return undefined;
   }
-  if (formLoad?.timeDelta > 0) {
-    return formLoad?.timeDelta / 1000;
-  }
-  return undefined;
 }
 
-function pageViews(bundle) {
-  return bundle.events.filter(e => e.checkpoint === 'viewblock').length;
-}
+
 
 function performanceDataChunks(data) {
   const dataChunks = new DataChunks();
   dataChunks.load(data);
   dataChunks.addSeries('pageViews', series.pageViews);
-  dataChunks.addSeries('formBlockLoadTime', formBlockLoadTime);
+  dataChunks.addSeries('lcp', series.lcp);
+  dataChunks.addSeries('formBlockLoadTime', formBlockLoadTime(2 * 60 * 1000));
+  dataChunks.addFacet('formBlockLoadTime', (bundle) => {
+    const getFormLoadTime = formBlockLoadTime()(bundle);
+    if (getFormLoadTime) {
+      return [`${getFormLoadTime}s`];
+    }
+    return undefined;
+  });
   dataChunks.addSeries('formLoaded', b => b.events.find(isFormLoadEvent) ? b.weight : 0);
   dataChunks.addFacet('hour', hour, 'every', 'none');
   return dataChunks;

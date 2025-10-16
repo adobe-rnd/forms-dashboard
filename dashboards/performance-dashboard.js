@@ -3,13 +3,13 @@
  * Displays form block load time statistics with hour-by-hour breakdown
  */
 import '../charts/load-time-chart.js';
+import '../charts/load-time-histogram.js';
 
 class PerformanceDashboard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this.dataChunks = null;
-    this.url = '';
   }
 
   connectedCallback() {
@@ -129,6 +129,10 @@ class PerformanceDashboard extends HTMLElement {
           margin-bottom: 24px;
         }
 
+        load-time-histogram {
+          margin-top: 32px;
+        }
+
         .performance-insights {
           margin-top: 24px;
           padding: 16px;
@@ -191,20 +195,12 @@ class PerformanceDashboard extends HTMLElement {
               <span class="stat-value" id="p75-load-time">-</span>
               <span class="stat-subtext">75% of loads are faster</span>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">Forms Loaded</span>
-              <span class="stat-value" id="forms-loaded">-</span>
-              <span class="stat-subtext">Pages with form blocks</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Total Page Views</span>
-              <span class="stat-value" id="total-views">-</span>
-              <span class="stat-subtext" id="load-rate">-</span>
-            </div>
           </div>
         </div>
 
         <load-time-chart id="load-time-chart"></load-time-chart>
+
+        <load-time-histogram id="load-time-histogram"></load-time-histogram>
       </div>
     `;
   }
@@ -232,6 +228,7 @@ class PerformanceDashboard extends HTMLElement {
     this.url = url;
     this.updateSummaryStats();
     this.updateChart();
+    this.updateHistogram();
   }
 
   updateChart() {
@@ -241,6 +238,24 @@ class PerformanceDashboard extends HTMLElement {
     chart.setData(this.dataChunks.facets.hour);
   }
 
+  updateHistogram() {
+    if (!this.dataChunks || !this.dataChunks.facets.formBlockLoadTime) return;
+
+    const histogram = this.shadowRoot.getElementById('load-time-histogram');
+
+    // Option 1: Use dynamic buckets (default behavior)
+    // histogram.setData(this.dataChunks.facets.formBlockLoadTime);
+
+    // Option 2: Use custom bucket thresholds
+    // Example: Create 5 buckets with custom ranges
+    const bucketThresholds = [0, 10, 20, 60, Infinity];
+    histogram.setData(this.dataChunks.facets.formBlockLoadTime, bucketThresholds);
+
+    // Option 3: Use different number of buckets with custom ranges
+    // const bucketThresholds = [0, 1, 2, 5, 10, Infinity];
+    // histogram.setData(this.dataChunks.facets.formBlockLoadTime, bucketThresholds);
+  }
+
   updateSummaryStats() {
     if (!this.dataChunks) return;
 
@@ -248,8 +263,7 @@ class PerformanceDashboard extends HTMLElement {
     const minLoadTime = totals.formBlockLoadTime?.min || 0;
     const p50LoadTime = totals.formBlockLoadTime?.percentile(50) || 0;
     const p75LoadTime = totals.formBlockLoadTime?.percentile(75) || 0;
-    const totalViews = totals.pageViews?.sum || 0;
-    const formsLoaded = totals.formLoaded?.sum || 0;
+    const lcpP75 = totals.lcp?.percentile(75) || 0;
 
     const minElement = this.shadowRoot.getElementById('min-load-time');
     minElement.textContent = this.formatTime(minLoadTime);
@@ -262,18 +276,18 @@ class PerformanceDashboard extends HTMLElement {
     const p75Element = this.shadowRoot.getElementById('p75-load-time');
     p75Element.textContent = this.formatTime(p75LoadTime);
     p75Element.className = 'stat-value ' + this.getPerformanceClass(p75LoadTime);
-
-    this.shadowRoot.getElementById('forms-loaded').textContent = formsLoaded.toLocaleString();
-    this.shadowRoot.getElementById('total-views').textContent = totalViews.toLocaleString();
-
-    // Calculate and display form load rate
-    const loadRate = totalViews > 0 ? (formsLoaded / totalViews) * 100 : 0;
-    this.shadowRoot.getElementById('load-rate').textContent = `${loadRate.toFixed(1)}% with forms`;
   }
 
   getPerformanceClass(loadTime) {
     if (loadTime <= 1) return 'fast';
     if (loadTime <= 2) return 'moderate';
+    return 'slow';
+  }
+
+  getLCPPerformanceClass(lcpTime) {
+    // LCP thresholds based on Core Web Vitals
+    if (lcpTime <= 2.5) return 'fast';
+    if (lcpTime <= 4) return 'moderate';
     return 'slow';
   }
 
@@ -295,6 +309,10 @@ class PerformanceDashboard extends HTMLElement {
     const chart = this.shadowRoot.getElementById('load-time-chart');
     if (chart) {
       chart.reset();
+    }
+    const histogram = this.shadowRoot.getElementById('load-time-histogram');
+    if (histogram) {
+      histogram.reset();
     }
     this.dataChunks = null;
     this.url = '';
