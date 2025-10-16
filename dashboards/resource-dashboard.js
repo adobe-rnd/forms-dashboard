@@ -238,7 +238,7 @@ class ResourceDashboard extends HTMLElement {
 
       <div class="dashboard-container">
         <div class="dashboard-header">
-          <h2>Missing Resources Dashboard</h2>
+          <h2>Missing Resources</h2>
           <div class="summary-stats" id="summary-stats">
             <div class="stat-item">
               <span class="stat-label">Total Page Views</span>
