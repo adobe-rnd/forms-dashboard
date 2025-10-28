@@ -168,9 +168,9 @@ class URLAutocomplete extends HTMLElement {
 
     // Text search - find URLs that contain the search term (case-insensitive)
     const searchTerm = value.toLowerCase();
-    this.filteredUrls = this.urls.filter(url =>
+    this.filteredUrls = this.urlNames.filter(url =>
       url.toLowerCase().includes(searchTerm)
-    );
+    )
 
     this.selectedIndex = -1;
     this.renderSuggestions();
@@ -267,12 +267,12 @@ class URLAutocomplete extends HTMLElement {
 
   selectUrl(url) {
     const input = this.shadowRoot.querySelector('.url-input');
-    input.value = url;
+    input.value = url.split(' (')[0];
     this.closeSuggestions();
 
     // Dispatch custom event
     this.dispatchEvent(new CustomEvent('url-selected', {
-      detail: { url },
+      detail: { url: input.value },
       bubbles: true,
       composed: true
     }));
@@ -286,8 +286,24 @@ class URLAutocomplete extends HTMLElement {
   }
 
   // Public method to set URLs
-  setUrls(urls) {
+  async setUrls(urls) {
+    if (!this.journeyMapping) {
+      const response = await fetch('/forms/journey-mapping.json')
+      const urlMapping = await response.json();
+      this.journeyMapping = Object.entries(urlMapping).reduce((acc, [key, value]) => {
+        acc[value] = acc[value] || [];
+        acc[value].push(key);
+        return acc;
+      }, {});
+    }
+    this.urlNames = urls.map(url => {
+      if (this.journeyMapping[url]) {
+        return `${url} (${this.journeyMapping[url]?.join(', ')})`;
+      }
+      return url;
+    });
     this.urls = urls || [];
+
   }
 
   // Public method to get current value
