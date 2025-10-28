@@ -558,13 +558,14 @@ class ErrorDashboard extends HTMLElement {
     const errorSourceFacets = this.dataChunks.facets.errorSource || [];
     const errorTargetFacets = this.dataChunks.facets.errorTarget || [];
     const userAgentFacets = this.dataChunks.facets.userAgent || [];
+    const errorDetailsFacets = this.dataChunks.facets.errorDetails || [];
 
     // Calculate total errors in this hour
     const totalErrorsInHour = hourData.errorCount;
 
     // Render sources and targets using facet data
-    this.renderDetailListFromFacets('error-sources-list', errorSourceFacets, totalErrorsInHour);
-    this.renderDetailListFromFacets('error-targets-list', errorTargetFacets, totalErrorsInHour);
+    this.renderDetailListFromFacets('error-sources-list', errorDetailsFacets, totalErrorsInHour);
+    // this.renderDetailListFromFacets('error-targets-list', errorTargetFacets, totalErrorsInHour);
 
     // Render user agent pie chart
     const userAgentChart = this.shadowRoot.getElementById('user-agent-chart');

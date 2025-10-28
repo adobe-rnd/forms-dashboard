@@ -1,5 +1,6 @@
 import { DataChunks, series, facets } from '@adobe/rum-distiller';
 
+
 function errorCount(bundle) {
   const errorEvents = bundle.events.filter(
     (event) => event.checkpoint === 'error' &&
@@ -33,6 +34,15 @@ function errorTarget(bundle) {
     .filter(({target}) => target)
     .reduce((acc, { target }) => {
         acc.add(target);
+        return acc;
+      }, new Set()))
+}
+
+function errorDetails(bundle) {
+  return Array.from(bundle.events
+    .filter(isValidError)
+    .reduce((acc, { source,target }) => {
+        acc.add(`${source} | ${target}`);
         return acc;
       }, new Set()))
 }
@@ -84,8 +94,10 @@ function errorDataChunks(data) {
 
   dataChunks.addSeries('pageViews', series.pageViews);
   dataChunks.addSeries('errorCount', errorCount, 'every');
+
   dataChunks.addFacet('errorSource', errorSource, 'every');
   dataChunks.addFacet('errorTarget', errorTarget, 'every');
+  dataChunks.addFacet('errorDetails', errorDetails, 'every');
   dataChunks.addFacet('hour', hour, 'every');
   dataChunks.addFacet('userAgent', facets.userAgent);
   dataChunks.addFacet('missingresource', missingresource, 'every');
