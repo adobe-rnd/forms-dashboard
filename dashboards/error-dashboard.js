@@ -485,7 +485,6 @@ class ErrorDashboard extends HTMLElement {
     chart.addEventListener('hour-selected', (event) => {
       this.selectHour(event.detail);
     });
-    this.selectHour(null);
   }
 
   setData(dataChunks, url) {
@@ -494,6 +493,7 @@ class ErrorDashboard extends HTMLElement {
     this.updateSummaryStats();
     this.updateChart();
     this.updateResourcesList();
+    this.selectHour(null);
   }
 
   updateChart() {
@@ -539,12 +539,12 @@ class ErrorDashboard extends HTMLElement {
   selectHour(hourData) {
     this.selectedHour = hourData;
 
-    // Update selected hour label
-    this.shadowRoot.getElementById('selected-hour-label').textContent = hourData.hour;
 
     // Use DataChunks filter to filter by the selected hour
     // Filter the dataChunks to only include bundles from this hour
-    if (hourData == null) {
+    if (hourData != null) {
+      // Update selected hour label
+      this.shadowRoot.getElementById('selected-hour-label').textContent = hourData.hour;
       this.updateFilter({
         hour: [hourData.rawHour]
       });
@@ -557,7 +557,7 @@ class ErrorDashboard extends HTMLElement {
     const errorDetailsFacets = this.dataChunks.facets.errorDetails || [];
 
     // Calculate total errors in this hour
-    const totalErrorsInHour = hourData.errorCount;
+    const totalErrorsInHour = this.dataChunks.totals.errorCount?.sum || 0;
 
     // Render sources and targets using facet data
     this.renderDetailListFromFacets('error-sources-list', errorDetailsFacets, totalErrorsInHour);
