@@ -60,6 +60,7 @@ function hour(bundle) {
 function missingresource(bundle) {
   return bundle.events
   .filter(e => e.checkpoint === 'missingresource')
+  .filter(e => e.source && ['redacted', 'junk_email'].every(s => !e.source.toLowerCase().includes(s)))
   .map(e => e.source);
 }
 
