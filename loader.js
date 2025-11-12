@@ -63,7 +63,7 @@ export default class DataLoader {
     this.SCOPE = undefined; // unused
     this.granularity = 'month';
     this.cacheExpiration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    this.useCache = true; // enable/disable IndexedDB caching
+    this.useCache = false; // enable/disable IndexedDB caching
     this.DB_NAME = 'rum-bundles-db';
     this.DB_VERSION = 1;
     this.STORE_NAME = 'bundles-cache';
@@ -334,7 +334,7 @@ export default class DataLoader {
     rumBundles.forEach((bundle) => addCalculatedProps(bundle));
 
     // Store in cache (don't await to avoid blocking)
-    this.setCachedData(apiRequestURL, { rumBundles });
+    // this.setCachedData(apiRequestURL, { rumBundles });
 
     return { date, rumBundles: this.filterByDateRange(rumBundles, start, end) };
   }
@@ -361,7 +361,7 @@ export default class DataLoader {
     rumBundles.forEach((bundle) => addCalculatedProps(bundle));
 
     // Store in cache (don't await to avoid blocking)
-    this.setCachedData(apiRequestURL, { rumBundles });
+    // this.setCachedData(apiRequestURL, { rumBundles });
 
     return { date, rumBundles: this.filterByDateRange(rumBundles, start, end) };
   }
@@ -391,7 +391,7 @@ export default class DataLoader {
     // do not cache if the date is today
     if (date !== new Date().toISOString().split('T')[0]) {
       // Store in cache (don't await to avoid blocking)
-      this.setCachedData(apiRequestURL, { rumBundles });
+      // this.setCachedData(apiRequestURL, { rumBundles });
     }
 
     return { date, hour, rumBundles: this.filterByDateRange(rumBundles, start, end) };

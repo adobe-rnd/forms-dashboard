@@ -70,25 +70,6 @@ function loadresource(bundle) {
   .map(e => e.source);
 }
 
-function loadResourceWithTime(bundle) {
-  return bundle.events
-    .filter(e => e.checkpoint === 'loadresource' && e.target && e.timeDelta)
-    .map(e => ({
-      target: e.target,
-      time: e.timeDelta / 1000 // Convert to seconds
-    }));
-}
-
-function resourceLoadTime(bundle) {
-  const resourceEvents = bundle.events
-    .filter(e => e.checkpoint === 'loadresource' && e.target && e.timeDelta);
-
-  if (resourceEvents.length === 0) return undefined;
-
-  // Return the time for each resource load event
-  return resourceEvents.map(e => e.timeDelta / 1000);
-}
-
 function errorDataChunks(data) {
   const dataChunks = new DataChunks();
   dataChunks.load(data);
@@ -144,14 +125,6 @@ function performanceDataChunks(data) {
   });
   dataChunks.addSeries('formLoaded', b => b.events.find(isFormLoadEvent) ? b.weight : 0);
   dataChunks.addFacet('loadresource', loadresource, 'every');
-
-  // Add resource load time tracking
-  dataChunks.addSeries('resourceLoadTime', resourceLoadTime, 'every');
-  dataChunks.addFacet('resourceTarget', (bundle) => {
-    return bundle.events
-      .filter(e => e.checkpoint === 'loadresource' && e.target)
-      .map(e => e.target);
-  }, 'every');
 
   dataChunks.addFacet('hour', hour, 'every', 'none');
   return dataChunks;

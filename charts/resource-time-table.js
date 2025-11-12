@@ -249,7 +249,7 @@ class ResourceTimeTable extends HTMLElement {
             <span class="summary-value" id="avg-time">-</span>
           </div>
           <div class="summary-stat">
-            <span class="summary-label">Slowest Resource</span>
+            <span class="summary-label">Slowest Resource (p95)</span>
             <span class="summary-value" id="slowest-time">-</span>
           </div>
         </div>
@@ -259,15 +259,17 @@ class ResourceTimeTable extends HTMLElement {
             <thead>
               <tr>
                 <th class="sortable" data-column="url">Resource URL</th>
-                <th class="sortable" data-column="mean">Mean</th>
+                <th class="sortable" data-column="min">Min</th>
                 <th class="sortable" data-column="median">Median (p50)</th>
-                <th class="sortable" data-column="max">Max</th>
+                <th class="sortable" data-column="p75">p75</th>
+                <th class="sortable" data-column="p95">p95</th>
+                <th class="sortable" data-column="mean">Mean</th>
                 <th class="sortable" data-column="count">Count</th>
               </tr>
             </thead>
             <tbody id="table-body">
               <tr>
-                <td colspan="5" class="no-data">No resource data available</td>
+                <td colspan="7" class="no-data">No resource data available</td>
               </tr>
             </tbody>
           </table>
@@ -301,68 +303,81 @@ class ResourceTimeTable extends HTMLElement {
   }
 
   setData(dataChunks) {
-    if (!dataChunks || !dataChunks.facets.resourceTarget) {
+    if (!dataChunks) {
       return;
     }
 
-    // Process resource data to calculate statistics
-    const resourceStats = new Map();
+    // Single pass: collect all resource times in one iteration
+    const resourceTimesMap = new Map();
 
-    dataChunks.facets.resourceTarget.forEach(facet => {
-      const url = facet.value;
-      const weight = facet.weight;
-      const count = facet.count;
+    // Iterate through filtered bundles once and collect all resource load times
+    dataChunks.filtered.forEach(bundle => {
+      bundle.events
+        .filter(e => e.checkpoint === 'loadresource')
+        .filter(e => e.source && e.target && !isNaN(Number(e.target)))
+        .forEach(e => {
+          const url = e.source; // source = resource URL
+          const timeInMs = Number(e.target); // target = time in ms
 
-      // Get the timing data for this specific resource
-      // We need to access the series data
-      if (!resourceStats.has(url)) {
-        resourceStats.set(url, {
-          url,
-          times: [],
-          count: 0,
-          weight: 0
+          // Filter out unrealistic values (> 10 seconds = 10000ms)
+          // This helps remove outliers and corrupted data
+          // Resources taking longer than 10s are likely errors or edge cases
+          if (timeInMs > 0 && timeInMs < 10000) {
+            const timeInSeconds = timeInMs / 1000;
+
+            if (!resourceTimesMap.has(url)) {
+              resourceTimesMap.set(url, []);
+            }
+            resourceTimesMap.get(url).push(timeInSeconds);
+          }
         });
-      }
-
-      const stat = resourceStats.get(url);
-      stat.count += count;
-      stat.weight += weight;
     });
 
-    // Get timing data from bundles if available
-    if (dataChunks.bundles) {
-      dataChunks.bundles.forEach(bundle => {
-        bundle.events
-          .filter(e => e.checkpoint === 'loadresource' && e.target && e.timeDelta)
-          .forEach(event => {
-            const url = event.target;
-            const time = event.timeDelta / 1000;
-
-            if (resourceStats.has(url)) {
-              resourceStats.get(url).times.push(time);
-            }
-          });
-      });
-    }
-
     // Calculate statistics for each resource
-    this.resourceData = Array.from(resourceStats.values())
-      .filter(stat => stat.times.length > 0)
-      .map(stat => {
-        const times = stat.times.sort((a, b) => a - b);
-        const mean = times.reduce((sum, t) => sum + t, 0) / times.length;
-        const median = this.calculateMedian(times);
-        const max = Math.max(...times);
+    this.resourceData = Array.from(resourceTimesMap.entries())
+      .map(([url, times]) => {
+        if (times.length === 0) {
+          return null;
+        }
+
+        // Sort once for all percentile calculations
+        times.sort((a, b) => a - b);
+
+        // Calculate all statistics
+        const count = times.length;
+        const min = times[0];
+        const sum = times.reduce((acc, t) => acc + t, 0);
+        const mean = sum / count;
+
+        // Percentile calculation using index-based approach
+        const p50Index = Math.floor(0.50 * count);
+        const p75Index = Math.floor(0.75 * count);
+        const p95Index = Math.floor(0.95 * count);
+        const median = times[p50Index];
+        const p75 = times[p75Index];
+        const p95 = times[p95Index];
+
+        // Debug: Log if mean is significantly higher than p95
+        if (mean > p95 * 2) {
+          console.warn(`Unusual mean for ${url}:`, {
+            min, median, p75, p95, mean, count,
+            'sample values above p95': times.slice(p95Index, Math.min(p95Index + 10, count))
+          });
+        }
 
         return {
-          url: stat.url,
+          url,
+          min,
           mean,
           median,
-          max,
-          count: stat.times.length,
+          p75,
+          p95,
+          count,
           performanceClass: this.getPerformanceClass(mean)
         };
-      });
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => b.mean - a.mean); // Sort by mean descending
 
     this.updateTable();
     this.updateSummaryStats();
@@ -404,6 +419,10 @@ class ResourceTimeTable extends HTMLElement {
           aVal = a.url;
           bVal = b.url;
           break;
+        case 'min':
+          aVal = a.min;
+          bVal = b.min;
+          break;
         case 'mean':
           aVal = a.mean;
           bVal = b.mean;
@@ -412,9 +431,13 @@ class ResourceTimeTable extends HTMLElement {
           aVal = a.median;
           bVal = b.median;
           break;
-        case 'max':
-          aVal = a.max;
-          bVal = b.max;
+        case 'p75':
+          aVal = a.p75;
+          bVal = b.p75;
+          break;
+        case 'p95':
+          aVal = a.p95;
+          bVal = b.p95;
           break;
         case 'count':
           aVal = a.count;
@@ -447,16 +470,18 @@ class ResourceTimeTable extends HTMLElement {
     const tbody = this.shadowRoot.getElementById('table-body');
 
     if (filteredData.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No resources match your search</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="no-data">No resources match your search</td></tr>';
       return;
     }
 
     tbody.innerHTML = filteredData.map(item => `
       <tr class="${item.performanceClass}">
         <td class="resource-url">${this.escapeHtml(item.url)}</td>
-        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.mean)}</span></td>
+        <td><span class="time-value fast">${this.formatTime(item.min)}</span></td>
         <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.median)}</span></td>
-        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.max)}</span></td>
+        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.p75)}</span></td>
+        <td><span class="time-value slow">${this.formatTime(item.p95)}</span></td>
+        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.mean)}</span></td>
         <td><span class="count-badge">${item.count.toLocaleString()}</span></td>
       </tr>
     `).join('');
@@ -469,7 +494,7 @@ class ResourceTimeTable extends HTMLElement {
 
     const totalResources = this.resourceData.length;
     const avgTime = this.resourceData.reduce((sum, item) => sum + item.mean, 0) / totalResources;
-    const slowestTime = Math.max(...this.resourceData.map(item => item.max));
+    const slowestTime = Math.max(...this.resourceData.map(item => item.p95));
 
     this.shadowRoot.getElementById('total-resources').textContent = totalResources.toLocaleString();
     this.shadowRoot.getElementById('avg-time').textContent = this.formatTime(avgTime);
@@ -494,7 +519,7 @@ class ResourceTimeTable extends HTMLElement {
     this.searchTerm = '';
     const tbody = this.shadowRoot.getElementById('table-body');
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No resource data available</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="no-data">No resource data available</td></tr>';
     }
   }
 }
