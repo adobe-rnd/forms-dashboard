@@ -392,8 +392,8 @@ class ResourceTimeTable extends HTMLElement {
   }
 
   getPerformanceClass(time) {
-    if (time < 0.5) return 'fast';
-    if (time < 2) return 'moderate';
+    if (time < 0.25) return 'fast';
+    if (time < 1) return 'moderate';
     return 'slow';
   }
 
@@ -477,11 +477,11 @@ class ResourceTimeTable extends HTMLElement {
     tbody.innerHTML = filteredData.map(item => `
       <tr class="${item.performanceClass}">
         <td class="resource-url">${this.escapeHtml(item.url)}</td>
-        <td><span class="time-value fast">${this.formatTime(item.min)}</span></td>
-        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.median)}</span></td>
-        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.p75)}</span></td>
-        <td><span class="time-value slow">${this.formatTime(item.p95)}</span></td>
-        <td><span class="time-value ${item.performanceClass}">${this.formatTime(item.mean)}</span></td>
+        <td><span class="time-value ${this.getPerformanceClass(item.min)}">${this.formatTime(item.min)}</span></td>
+        <td><span class="time-value ${this.getPerformanceClass(item.median)}">${this.formatTime(item.median)}</span></td>
+        <td><span class="time-value ${this.getPerformanceClass(item.p75)}">${this.formatTime(item.p75)}</span></td>
+        <td><span class="time-value ${this.getPerformanceClass(item.p95)}">${this.formatTime(item.p95)}</span></td>
+        <td><span class="time-value ${this.getPerformanceClass(item.mean)}">${this.formatTime(item.mean)}</span></td>
         <td><span class="count-badge">${item.count.toLocaleString()}</span></td>
       </tr>
     `).join('');
