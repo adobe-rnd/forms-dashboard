@@ -210,6 +210,45 @@ class ResourceTimeTable extends HTMLElement {
           color: #1e40af;
         }
 
+        .performance-legend {
+          display: flex;
+          gap: 12px;
+          margin: 8px 16px 16px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .legend-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 0.75rem;
+        }
+
+        .legend-badge.fast {
+          background: #f0fdf4;
+          color: #059669;
+        }
+
+        .legend-badge.moderate {
+          background: #fffbeb;
+          color: #d97706;
+        }
+
+        .legend-badge.slow {
+          background: #fef2f2;
+          color: #dc2626;
+        }
+
         @media (max-width: 768px) {
           .search-input {
             width: 150px;
@@ -251,6 +290,21 @@ class ResourceTimeTable extends HTMLElement {
           <div class="summary-stat">
             <span class="summary-label">Slowest Resource (p95)</span>
             <span class="summary-value" id="slowest-time">-</span>
+          </div>
+        </div>
+
+        <div class="performance-legend">
+          <div class="legend-item">
+            <span class="legend-badge fast">Fast</span>
+            < 250ms
+          </div>
+          <div class="legend-item">
+            <span class="legend-badge moderate">Moderate</span>
+            250ms - 1s
+          </div>
+          <div class="legend-item">
+            <span class="legend-badge slow">Slow</span>
+            ≥ 1s
           </div>
         </div>
 
