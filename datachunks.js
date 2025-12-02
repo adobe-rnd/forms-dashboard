@@ -2,27 +2,49 @@ import { DataChunks, series, facets } from '@adobe/rum-distiller';
 
 
 function errorCount(bundle) {
-  return bundle.events.filter(
-    (event) => event.checkpoint === 'error' && event.source !== 'focus-loss'
-  ).length;
+  const errorEvents = bundle.events.filter(
+    (event) => event.checkpoint === 'error' &&
+    event.source !== 'focus-loss' &&
+    event.source !== 'undefined error' &&
+    !event.source?.includes('helix-rum-enhancer')
+  );
+  const hasUndefinedError = errorEvents.some(({source}) => source === 'undefined error');
+  return errorEvents.length + (hasUndefinedError ? 1 : 0);
 }
 
 function isValidError(event) {
-  return event.checkpoint === 'error' && event.source !== 'focus-loss';
+  return event.checkpoint === 'error' &&
+    event.source !== 'focus-loss' &&
+  !event.source?.includes('helix-rum-enhancer')
 }
 
 function errorSource(bundle) {
-  return bundle.events
+  return Array.from(bundle.events
     .filter(isValidError)
-    .map(({source}) => source)
-    .filter(Boolean); // Remove empty sources
+    .filter(({source}) => source)
+    .reduce((acc, { source }) => {
+        acc.add(source);
+        return acc;
+      }, new Set()))
 }
 
 function errorTarget(bundle) {
-  return bundle.events
+  return Array.from(bundle.events
     .filter(isValidError)
-    .map(({target}) => target)
-    .filter(Boolean); // Remove empty targets
+    .filter(({target}) => target)
+    .reduce((acc, { target }) => {
+        acc.add(target);
+        return acc;
+      }, new Set()))
+}
+
+function errorDetails(bundle) {
+  return Array.from(bundle.events
+    .filter(isValidError)
+    .reduce((acc, { source,target }) => {
+        acc.add(`${source} | ${target}`);
+        return acc;
+      }, new Set()))
 }
 
 function hour(bundle) {
@@ -38,7 +60,40 @@ function hour(bundle) {
 function missingresource(bundle) {
   return bundle.events
   .filter(e => e.checkpoint === 'missingresource')
+  .filter(e => e.source && ['redacted', 'junk_email'].every(s => !e.source.toLowerCase().includes(s)))
   .map(e => e.source);
+}
+
+function loadresource(bundle) {
+  return bundle.events
+  .filter(e => e.checkpoint === 'loadresource')
+  .filter(e => e.source && ['redacted', 'junk_email'].every(s => !e.source.toLowerCase().includes(s)))
+  .map(e => e.source);
+}
+
+function normalizeSourceValue(src) {
+  try {
+    // Normalize http/https URLs to origin + pathname without trailing slash or hash
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      const u = new URL(src);
+      let path = (u.pathname || '/').replace(/\/+$/, '');
+      // root path -> empty string for cleaner label
+      if (path === '') path = '';
+      return `${u.origin}${path}`;
+    }
+    // Strip trailing '/#' or '#' variants
+    return src.replace(/\/?#$/, '');
+  } catch (e) {
+    // Fallback: return as-is
+    return src;
+  }
+}
+
+function enterSourceFacet(bundle) {
+  return bundle.events
+    .filter(e => e.checkpoint === 'enter')
+    .filter(e => e.source && ['redacted', 'junk_email'].every(s => !e.source.toLowerCase().includes(s)))
+    .map(e => normalizeSourceValue(e.source));
 }
 
 function errorDataChunks(data) {
@@ -47,8 +102,10 @@ function errorDataChunks(data) {
 
   dataChunks.addSeries('pageViews', series.pageViews);
   dataChunks.addSeries('errorCount', errorCount, 'every');
+
   dataChunks.addFacet('errorSource', errorSource, 'every');
   dataChunks.addFacet('errorTarget', errorTarget, 'every');
+  dataChunks.addFacet('errorDetails', errorDetails, 'every');
   dataChunks.addFacet('hour', hour, 'every');
   dataChunks.addFacet('userAgent', facets.userAgent);
   dataChunks.addFacet('missingresource', missingresource, 'every');
@@ -93,7 +150,10 @@ function performanceDataChunks(data) {
     return undefined;
   });
   dataChunks.addSeries('formLoaded', b => b.events.find(isFormLoadEvent) ? b.weight : 0);
+  dataChunks.addFacet('loadresource', loadresource, 'every');
+
   dataChunks.addFacet('hour', hour, 'every', 'none');
+  dataChunks.addFacet('enterSource', enterSourceFacet, 'every', 'none');
   return dataChunks;
 }
 
