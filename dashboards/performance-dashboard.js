@@ -4,6 +4,8 @@
  */
 import '../charts/load-time-chart.js';
 import '../charts/load-time-histogram.js';
+import '../charts/source-time-series-chart.js';
+import '../charts/resource-time-table.js';
 
 class PerformanceDashboard extends HTMLElement {
   constructor() {
@@ -133,6 +135,10 @@ class PerformanceDashboard extends HTMLElement {
           margin-top: 32px;
         }
 
+        resource-time-table {
+          margin-top: 32px;
+        }
+
         .performance-insights {
           margin-top: 24px;
           padding: 16px;
@@ -204,6 +210,14 @@ class PerformanceDashboard extends HTMLElement {
         <load-time-chart id="load-time-chart"></load-time-chart>
 
         <load-time-histogram id="load-time-histogram"></load-time-histogram>
+
+        <div class="dashboard-header" style="margin-top:24px;">
+          <h3>By Source Over Time</h3>
+          <p class="description">Hourly trend per selected source(s)</p>
+        </div>
+        <source-time-series-chart id="source-time-series-chart"></source-time-series-chart>
+
+        <resource-time-table id="resource-time-table"></resource-time-table>
       </div>
     `;
   }
@@ -212,26 +226,32 @@ class PerformanceDashboard extends HTMLElement {
     const statP50 = this.shadowRoot.getElementById('stat-p50');
     const statP75 = this.shadowRoot.getElementById('stat-p75');
     const chart = this.shadowRoot.getElementById('load-time-chart');
+    const sourceSeriesChart = this.shadowRoot.getElementById('source-time-series-chart');
 
     statP50.addEventListener('click', () => {
       statP50.classList.add('active');
       statP75.classList.remove('active');
       chart.setAttribute('percentile', 'p50');
+      sourceSeriesChart.setAttribute('percentile', 'p50');
     });
 
     statP75.addEventListener('click', () => {
       statP75.classList.add('active');
       statP50.classList.remove('active');
       chart.setAttribute('percentile', 'p75');
+      sourceSeriesChart.setAttribute('percentile', 'p75');
     });
   }
 
-  setData(dataChunks, url) {
+  setData(dataChunks, url, rawChunks, aliasMap) {
     this.dataChunks = dataChunks;
     this.url = url;
+    this.rawChunks = rawChunks;
+    this.aliasMap = aliasMap || null;
     this.updateSummaryStats();
     this.updateChart();
     this.updateHistogram();
+    this.updateResourceTable();
   }
 
   updateChart() {
@@ -239,6 +259,20 @@ class PerformanceDashboard extends HTMLElement {
 
     const chart = this.shadowRoot.getElementById('load-time-chart');
     chart.setData(this.dataChunks.facets.hour);
+
+    const bundles = Array.isArray(this.rawChunks)
+      ? this.rawChunks.flatMap((c) => c.rumBundles || [])
+      : [];
+
+    const sourceSeriesChart = this.shadowRoot.getElementById('source-time-series-chart');
+    if (bundles.length) {
+      if (this.aliasMap && sourceSeriesChart.setAliasMap) {
+        sourceSeriesChart.setAliasMap(this.aliasMap);
+      }
+      sourceSeriesChart.setFromBundles(bundles);
+    } else {
+      sourceSeriesChart.reset();
+    }
   }
 
   updateHistogram() {
@@ -257,6 +291,13 @@ class PerformanceDashboard extends HTMLElement {
     // Option 3: Use different number of buckets with custom ranges
     // const bucketThresholds = [0, 1, 2, 5, 10, Infinity];
     // histogram.setData(this.dataChunks.facets.formBlockLoadTime, bucketThresholds);
+  }
+
+  updateResourceTable() {
+    if (!this.dataChunks) return;
+
+    const resourceTable = this.shadowRoot.getElementById('resource-time-table');
+    resourceTable.setData(this.dataChunks);
   }
 
   updateSummaryStats() {
@@ -317,6 +358,10 @@ class PerformanceDashboard extends HTMLElement {
     if (histogram) {
       histogram.reset();
     }
+    const resourceTable = this.shadowRoot.getElementById('resource-time-table');
+    if (resourceTable) {
+      resourceTable.reset();
+    }
     this.dataChunks = null;
     this.url = '';
   }
@@ -326,4 +371,3 @@ class PerformanceDashboard extends HTMLElement {
 customElements.define('performance-dashboard', PerformanceDashboard);
 
 export default PerformanceDashboard;
-
