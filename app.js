@@ -9,6 +9,8 @@ import EngagementDashboard from './dashboards/engagement-dashboard.js';
 import ResourceDashboard from './dashboards/resource-dashboard.js';
 import { errorDataChunks, performanceDataChunks, engagementDataChunks, resourceDataChunks } from './datachunks.js';
 
+
+
 const dataLoader = new DataLoader();
 const BUNDLER_ENDPOINT = 'https://bundles.aem.page';
 dataLoader.apiEndpoint = BUNDLER_ENDPOINT;
@@ -105,10 +107,14 @@ async function renderFromURLParams() {
   if (currentUrl !== url) {
     urlAutocomplete.setValue(url);
   }
-
   // If URL is specified, filter data and render dashboard
   if (url) {
     try {
+      // Ensure data is loaded before rendering
+      if (!currentData || !Array.isArray(currentData)) {
+        await loadData(startDate, endDate);
+      }
+      // Filter by URL
       const filteredData = currentData.map((chunk) => ({
         date: chunk.date,
         hour: chunk.hour,
@@ -124,7 +130,8 @@ async function renderFromURLParams() {
         dataChunksForDashboard = dataChunksConfig[tab](filteredData);
         dashboardElement = document.createElement(`${tab}-dashboard`);
         urlResults.appendChild(dashboardElement);
-        dashboardElement.setData(dataChunksForDashboard, url);
+        // Pass filteredData as third arg so performance dashboard can aggregate sources fully
+        dashboardElement.setData(dataChunksForDashboard, url, filteredData, sourceAliasMap);
       } else {
         urlResults.innerHTML = '<p>No data found for this URL</p>';
       }
@@ -144,8 +151,41 @@ function handleParamUpdate(paramUpdates) {
 }
 
 let currentData;
+let sourceAliasMap = null; // alias -> canonical
+
+async function loadSourceAliasesOnce() {
+  if (sourceAliasMap) return sourceAliasMap;
+  try {
+    const resp = await fetch('/forms/source-aliases.json');
+    const json = await resp.json();
+    const alias = {};
+    Object.entries(json || {}).forEach(([canonical, list]) => {
+      const arr = Array.isArray(list) ? list : [];
+      arr.concat([canonical]).forEach((s) => alias[normalizeSourceValue(s)] = canonical);
+    });
+    sourceAliasMap = alias;
+  } catch (e) {
+    sourceAliasMap = {};
+  }
+  return sourceAliasMap;
+}
+
+function normalizeSourceValue(src) {
+  try {
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      const u = new URL(src);
+      let path = (u.pathname || '/').replace(/\/+$/, '');
+      if (path === '') path = '';
+      return `${u.origin}${path}`;
+    }
+    return src.replace(/\/?#$/, '');
+  } catch (e) {
+    return src;
+  }
+}
 
 async function loadData(startDate, endDate) {
+  await loadSourceAliasesOnce();
   currentData = await dataLoader.fetchDateRange(startDate, endDate);
   // Update the URLs autocomplete with new data
   const newDataChunks = new DataChunks();
