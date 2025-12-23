@@ -6,12 +6,14 @@ import '../charts/load-time-chart.js';
 import '../charts/load-time-histogram.js';
 import '../charts/source-time-series-chart.js';
 import '../charts/resource-time-table.js';
+import '../charts/user-agent-pie-chart.js';
 
 class PerformanceDashboard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this.dataChunks = null;
+    this.url = '';
   }
 
   connectedCallback() {
@@ -139,6 +141,32 @@ class PerformanceDashboard extends HTMLElement {
           margin-top: 32px;
         }
 
+        .user-agent-section {
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 2px solid #e5e7eb;
+        }
+
+        .user-agent-section h3 {
+          margin: 0 0 16px 0;
+          color: #1e40af;
+          font-size: 1.25rem;
+          font-weight: 600;
+        }
+
+        .chart-section {
+          background: #f9fafb;
+          border-radius: 6px;
+          padding: 16px;
+        }
+
+        .chart-section h4 {
+          margin: 0 0 16px 0;
+          color: #374151;
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
         .performance-insights {
           margin-top: 24px;
           padding: 16px;
@@ -189,6 +217,7 @@ class PerformanceDashboard extends HTMLElement {
           <p class="description">
             How long does it take for the form to be visible on the screen?
           </p>
+
           <div class="summary-stats" id="summary-stats">
             <div class="stat-item">
               <span class="stat-label">Fastest (Min)</span>
@@ -218,6 +247,14 @@ class PerformanceDashboard extends HTMLElement {
         <source-time-series-chart id="source-time-series-chart"></source-time-series-chart>
 
         <resource-time-table id="resource-time-table"></resource-time-table>
+
+        <div class="user-agent-section">
+          <h3>User Agent Distribution</h3>
+          <div class="chart-section">
+            <h4>Device Breakdown</h4>
+            <user-agent-pie-chart id="user-agent-chart"></user-agent-pie-chart>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -252,12 +289,26 @@ class PerformanceDashboard extends HTMLElement {
     this.updateChart();
     this.updateHistogram();
     this.updateResourceTable();
+    this.updateUserAgentChart();
+  }
+
+  updateUserAgentChart() {
+    if (!this.dataChunks) return;
+    const uaChart = this.shadowRoot.getElementById('user-agent-chart');
+    if (!uaChart) return;
+    // Always show overall distribution for the current URL/date range (not the primary device filter),
+    // otherwise selecting a specific device type makes the chart uninformative.
+    const prevFilter = this.dataChunks.filter;
+    this.dataChunks.filter = {};
+    const userAgentFacets = this.dataChunks.facets.userAgent || [];
+    this.dataChunks.filter = prevFilter || {};
+    uaChart.setData(userAgentFacets);
   }
 
   updateChart() {
     if (!this.dataChunks || !this.dataChunks.facets.hour) return;
-
     const chart = this.shadowRoot.getElementById('load-time-chart');
+    if (!chart) return;
     chart.setData(this.dataChunks.facets.hour);
 
     const bundles = Array.isArray(this.rawChunks)
@@ -277,8 +328,8 @@ class PerformanceDashboard extends HTMLElement {
 
   updateHistogram() {
     if (!this.dataChunks || !this.dataChunks.facets.formBlockLoadTime) return;
-
     const histogram = this.shadowRoot.getElementById('load-time-histogram');
+    if (!histogram) return;
 
     // Option 1: Use dynamic buckets (default behavior)
     // histogram.setData(this.dataChunks.facets.formBlockLoadTime);
@@ -307,7 +358,6 @@ class PerformanceDashboard extends HTMLElement {
     const minLoadTime = totals.formBlockLoadTime?.min || 0;
     const p50LoadTime = totals.formBlockLoadTime?.percentile(50) || 0;
     const p75LoadTime = totals.formBlockLoadTime?.percentile(75) || 0;
-    const lcpP75 = totals.lcp?.percentile(75) || 0;
 
     const minElement = this.shadowRoot.getElementById('min-load-time');
     minElement.textContent = this.formatTime(minLoadTime);

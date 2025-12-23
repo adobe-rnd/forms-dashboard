@@ -151,6 +151,7 @@ function performanceDataChunks(data) {
   });
   dataChunks.addSeries('formLoaded', b => b.events.find(isFormLoadEvent) ? b.weight : 0);
   dataChunks.addFacet('loadresource', loadresource, 'every');
+  dataChunks.addFacet('userAgent', facets.userAgent);
 
   dataChunks.addFacet('hour', hour, 'every', 'none');
   dataChunks.addFacet('enterSource', enterSourceFacet, 'every', 'none');
